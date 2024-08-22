@@ -1,0 +1,59 @@
+version: '3'
+
+services:
+  db:
+    image: mariadb:10.6.12
+    container_name: ncdb
+    restart: unless-stopped
+    command: --transaction-isolation=READ-COMMITTED --log-bin=binlog --binlog-format=ROW
+    volumes:
+      - /opt/services/db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=            #Password for MYSQL Root Account
+      - MYSQL_PASSWORD=                 #Password for MYSQL Account
+      - MYSQL_DATABASE=                 #Database name
+      - MYSQL_USER=                     #Username
+    networks:
+      - services_net
+
+  app:
+    image: nextcloud:26.0.0-apache
+    container_name: nextcloud
+    restart: unless-stopped
+    ports:
+      - 8080:80
+    links:
+      - db
+    volumes:
+      - /etc/hosts:/etc/hosts
+      - /opt/services/nextcloud:/var/www/html
+      - /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
+    environment:
+      - MYSQL_PASSWORD=                 #Password for MYSQL Account
+      - MYSQL_DATABASE=                 #Database name
+      - MYSQL_USER=                     #Username
+      - MYSQL_HOST=db
+      - NEXTCLOUD_TRUSTED_DOMAINS=domain_name domain_ip:8080
+      - OVERWRITEPROTOCOL=https
+    networks:
+      - services_net
+
+  nginx:
+    image: bitnami/nginx:1.23.4
+    container_name: nginx-proxy
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - '80:80'
+      - '443:8443'
+    volumes:
+      - /etc/hosts:/etc/hosts
+      - /opt/services/certs:/opt/bitnami/nginx/conf/bitnami/certs
+      - /opt/services/conf/nginx.conf:/opt/bitnami/nginx/conf/nginx.conf
+    networks:
+      - services_net
+
+networks:
+  services_net:
+    driver: bridge
