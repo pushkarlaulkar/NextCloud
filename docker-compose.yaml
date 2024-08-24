@@ -17,7 +17,7 @@ services:
       - services_net
 
   app:
-    image: nextcloud:26.0.0-apache
+    image: nextcloud:29.0.5-apache
     container_name: nextcloud
     restart: unless-stopped
     ports:
